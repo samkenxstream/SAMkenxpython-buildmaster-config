@@ -71,15 +71,6 @@ def get_workers(settings):
             tags=['windows', 'win10', 'amd64', 'x86-64'],
         ),
         cpw(
-            name="bolen-windows7",
-            tags=['windows', 'win7', 'x86'],
-        ),
-        cpw(
-            name="bray-win10-cygwin-amd64",
-            tags=['windows', 'win10', 'cygwin', 'unix', 'amd64', 'x86-64'],
-            branches=['3.x'],
-        ),
-        cpw(
             name="cstratak-fedora-rawhide-x86_64",
             tags=['linux', 'unix', 'fedora', 'amd64', 'x86-64'],
             parallel_tests=10,
@@ -162,7 +153,7 @@ def get_workers(settings):
         cpw(
             name="edelsohn-aix-ppc64",
             tags=['aix', 'unix', 'ppc64'],
-            branches=['3.8', '3.9', '3.10', '3.11', '3.x'],
+            branches=['3.9', '3.10', '3.11', '3.x'],
             parallel_tests=10,
         ),
         cpw(
@@ -208,6 +199,12 @@ def get_workers(settings):
             tags=['linux', 'unix', 'debian', 'amd64', 'x86-64'],
         ),
         cpw(
+            name="gps-arm64-debian",
+            tags=['linux', 'unix', 'arm64', 'aarch64', 'arm', 'debian'],
+            parallel_tests=7,  # Shortest test time; 4 vCPU host.
+            branches=['3.10', '3.11', '3.x'],
+        ),
+        cpw(
             name="gps-raspbian",
             tags=['linux', 'unix', 'raspbian', 'debian', 'armv6', 'armv7l',
                   'aarch32', 'arm'],
@@ -222,11 +219,6 @@ def get_workers(settings):
             name="kloth-win64",
             tags=['windows', 'win10', 'amd64', 'x86-64'],
             parallel_tests=8,
-        ),
-        cpw(
-            name="kloth-win7",
-            tags=['windows', 'win7', 'amd64', 'x86-64'],
-            parallel_tests=6,
         ),
         cpw(
             name="koobs-freebsd-9e36",
@@ -267,12 +259,6 @@ def get_workers(settings):
         cpw(
             name="ware-gentoo-x86",
             tags=['linux', 'unix', 'gentoo', 'x86'],
-            parallel_builders=2,
-        ),
-        cpw(
-            name="ware-win81-release",
-            tags=['windows', 'win8', 'amd64', 'x86-64'],
-            parallel_tests=4,
         ),
         cpw(
             name="ware-win11",
@@ -285,9 +271,16 @@ def get_workers(settings):
             parallel_tests=4,
         ),
         cpw(
-            name="linaro2-win-arm64",
-            tags=['windows', 'arm64'],
+            name="bcannon-wasm",
+            tags=['wasm', 'emscripten', 'wasi'],
+            branches=['3.11', '3.x'],
             parallel_tests=2,
+            parallel_builders=2,
         ),
-
+        cpw(
+            name="ambv-bb-win11",
+            tags=['windows', 'win11', 'amd64', 'x86-64', 'bigmem'],
+            branches=['3.x'],
+            parallel_tests=4,
+        ),
     ]

@@ -19,49 +19,31 @@ from buildbot.reporters.utils import getDetailsForBuild
 
 from custom.testsuite_utils import get_logs_and_tracebacks_from_build
 
-PR_MESSAGE = """\
-:warning::warning::warning: Buildbot failure :warning::warning::warning:
-------------------------------------------------------------------------
+MESSAGE = """\
+:warning: **Buildbot failure** :warning:
 
-Hi! The buildbot **{buildername}** has failed when building commit {sha}.
-
-What do you need to do:
-
-1. Don't panic.
-2. Check [the buildbot page in the devguide](https://devguide.python.org/buildbots/) \
-if you don't know what the buildbots are or how they work.
-3. Go to the page of the buildbot that failed ({build_url}) \
-and take a look at the build logs.
-4. Check if the failure is related to this commit ({sha}) or \
-if it is a false positive.
-5. If the failure is related to this commit, please, reflect \
-that on the issue and make a new Pull Request with a fix.
+The buildbot **{buildername}** has failed when building commit {sha}(https://github.com/python/cpython/commit/{sha}).
 
 You can take a look at the buildbot page here:
 
 {build_url}
 
+```
 {failed_test_text}
-
-Summary of the results of the build (if available):
-
-{summary_text}
-
-<details>
-<summary>Click to see traceback logs</summary>
-
-{tracebacks}
-
-</details>
+```
 """
 
 
-class GitHubPullRequestReporter(reporters.GitHubStatusPush):
-    name = "GitHubPullRequestReporter"
+class DiscordReporter(reporters.HttpStatusPush):
+    name = "DiscordReporter"
+
+    def __init__(self, *args, verbose=True, **kwargs):
+        self.verbose = True
+        super().__init__(*args, **kwargs)
 
     @defer.inlineCallbacks
     def sendMessage(self, reports):
-        build = reports[0]['builds'][0]
+        build = reports[0]["builds"][0]
 
         props = Properties.fromDict(build["properties"])
         props.master = self.master
@@ -82,11 +64,11 @@ class GitHubPullRequestReporter(reporters.GitHubStatusPush):
         if state != "failure":
             return
 
-        yield getDetailsForBuild(self.master, build, want_logs=True, want_logs_content=True, want_steps=True)
+        yield getDetailsForBuild(
+            self.master, build, want_logs=True, want_logs_content=True, want_steps=True
+        )
 
-        logs, tracebacks = get_logs_and_tracebacks_from_build(build)
-
-        context = yield props.render(self.context)
+        logs, _ = get_logs_and_tracebacks_from_build(build)
 
         sourcestamps = build["buildset"].get("sourcestamps")
 
@@ -129,44 +111,31 @@ class GitHubPullRequestReporter(reporters.GitHubStatusPush):
             )
 
         try:
-            repo_user = repoOwner
-            repo_name = repoName
             sha = change["revision"]
-            target_url = build["url"]
-            context = context
-            yield self.createStatus(
+            yield self.createReport(
                 build=build,
-                repo_user=repo_user,
-                repo_name=repo_name,
                 sha=sha,
-                state=state,
-                target_url=target_url,
-                context=context,
-                issue=issue,
-                tracebacks=tracebacks,
                 logs=logs,
             )
             if self.verbose:
                 log.msg(
-                    "Issued a Pull Request comment for {repoOwner}/{repoName} "
-                    'at {sha}, context "{context}", issue {issue}.'.format(
+                    "Issued a dicord comment for {repoOwner}/{repoName} "
+                    "at {sha}, issue {issue}.".format(
                         repoOwner=repoOwner,
                         repoName=repoName,
                         sha=sha,
                         issue=issue,
-                        context=context,
                     )
                 )
         except Exception as e:
             log.err(
                 e,
-                "Failed to issue a Pull Request comment for {repoOwner}/{repoName} "
-                'at {sha}, context "{context}", issue {issue}.'.format(
+                "Failed to issue a discord comment for {repoOwner}/{repoName} "
+                "at {sha}, issue {issue}.".format(
                     repoOwner=repoOwner,
                     repoName=repoName,
                     sha=sha,
                     issue=issue,
-                    context=context,
                 ),
             )
 
@@ -174,34 +143,22 @@ class GitHubPullRequestReporter(reporters.GitHubStatusPush):
         prefix = self.master.config.buildbotURL
         return prefix + "#builders/%d/builds/%d" % (builderid, build_number)
 
-    def createStatus(
+    def createReport(
         self,
         build,
-        repo_user,
-        repo_name,
         sha,
-        state,
-        target_url=None,
-        context=None,
-        issue=None,
-        tracebacks=None,
-        logs=None,
+        logs,
     ):
 
-        message = PR_MESSAGE.format(
+        message = MESSAGE.format(
             buildername=build["builder"]["name"],
             build_url=self._getURLForBuild(
                 build["builder"]["builderid"], build["number"]
             ),
             sha=sha,
-            tracebacks="```python-traceback\n{}\n```".format("\n\n".join(tracebacks)),
-            summary_text=logs.test_summary(),
             failed_test_text=logs.format_failing_tests(),
         )
 
-        payload = {"body": message}
+        payload = {"content": message, "embeds": []}
 
-        return self._http.post(
-            "/".join(["/repos", repo_user, repo_name, "issues", issue, "comments"]),
-            json=payload,
-        )
+        return self._http.post("", json=payload)
